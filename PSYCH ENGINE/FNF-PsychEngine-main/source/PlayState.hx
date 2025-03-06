@@ -1021,6 +1021,7 @@ class PlayState extends MusicBeatState
 				sprite.setGraphicSize(Std.int(sprite.width * 1.1));
 				sprite.updateHitbox();
 				sprite.alpha = 0;
+				sprite.color = FlxColor.RED;
 				sprite.cameras = [camOther];
 				sprite.x -= 85;
 			}
