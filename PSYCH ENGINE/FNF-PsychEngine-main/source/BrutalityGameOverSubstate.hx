@@ -59,9 +59,8 @@ class BrutalityGameOverSubstate extends MusicBeatSubstate
 		super();
 
 		Conductor.songPosition = 0;
-        camHUD = new FlxCamera();
-        FlxG.cameras.add(camHUD);
-        FlxCamera.defaultCameras = [camHUD];
+		FlxG.cameras.add(camHUD = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camHUD, true);
 
 		if(!ClientPrefs.lowQuality && FlxG.random.bool(28)){ //28% chance of Amelia laughing in the gameover screen.
 			hazardInterlopeLaugh = new FlxSprite();

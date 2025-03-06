@@ -353,6 +353,9 @@ class Note extends FlxSprite
 
 			if (strumTime < Conductor.songPosition - (hitCausesMiss ? Conductor.safeZoneOffsetHURTNOTE:Conductor.safeZoneOffset) && !wasGoodHit)
 				tooLate = true;
+
+			if (!hitCausesMiss)
+				missHealth = 0;
 		}
 		else
 		{

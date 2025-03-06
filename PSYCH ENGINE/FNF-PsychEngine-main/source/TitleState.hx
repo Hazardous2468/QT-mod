@@ -26,7 +26,7 @@ import flixel.group.FlxGroup;
 import flixel.input.gamepad.FlxGamepad;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
-import flixel.system.FlxSound;
+import flixel.sound.FlxSound;
 import flixel.system.ui.FlxSoundTray;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
@@ -39,7 +39,6 @@ import openfl.Assets;
 using StringTools;
 typedef TitleData =
 {
-	
 	titlex:Float,
 	titley:Float,
 	startx:Float,
@@ -47,7 +46,6 @@ typedef TitleData =
 	gfx:Float,
 	gfy:Float,
 	backgroundSprite:String,
-	bpm:Int
 }
 class TitleState extends MusicBeatState
 {
@@ -56,6 +54,7 @@ class TitleState extends MusicBeatState
 	public static var volumeUpKeys:Array<FlxKey> = [FlxKey.NUMPADPLUS, FlxKey.PLUS];
 
 	public static var initialized:Bool = false;
+	public static var firstTime:Bool = true;
 
 	var blackScreen:FlxSprite;
 	var credGroup:FlxGroup;
@@ -256,20 +255,15 @@ class TitleState extends MusicBeatState
 		persistentUpdate = true;
 
 		var bg:FlxSprite = new FlxSprite();
-		
+
 		if (titleJSON.backgroundSprite != null && titleJSON.backgroundSprite.length > 0 && titleJSON.backgroundSprite != "none"){
 			bg.loadGraphic(Paths.image(titleJSON.backgroundSprite));
 		}else{
 			bg.makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		}
-		
 		// bg.antialiasing = ClientPrefs.globalAntialiasing;
 		// bg.setGraphicSize(Std.int(bg.width * 0.6));
 		// bg.updateHitbox();
-		
-		
-		
-		
 		add(bg);
 
 		logoBl = new FlxSprite(titleJSON.titlex, titleJSON.titley);
@@ -300,7 +294,7 @@ class TitleState extends MusicBeatState
 		// logoBl.color = FlxColor.BLACK;
 
 		swagShader = new ColorSwap();
-			gfDance = new FlxSprite(titleJSON.gfx, titleJSON.gfy);
+		gfDance = new FlxSprite(titleJSON.gfx, titleJSON.gfy);
 		
 		#if (desktop && MODS_ALLOWED)
 		var path = "mods/" + Paths.currentModDirectory + "/images/gfDanceTitle.png";
@@ -322,22 +316,21 @@ class TitleState extends MusicBeatState
 			gfDance.animation.addByIndices('danceRight', 'gfDance', [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "", 24, false);
 	
 		gfDance.antialiasing = ClientPrefs.globalAntialiasing;
+
 		add(gfDance);
 		gfDance.shader = swagShader.shader;
 		add(logoBl);
-		//logoBl.shader = swagShader.shader;
+		logoBl.shader = swagShader.shader;
 
-
-		//hi QT
+		// hi QT!
 		qt = new FlxSprite(FlxG.width * -0.4, FlxG.height * 0.035);
 		qt.frames = Paths.getSparrowAtlas('qt_titlescreen');
 		qt.animation.addByPrefix('idle', 'titleanimation', 24, false);
 		qt.setGraphicSize(Std.int(qt.width * 0.25));
-		qt.antialiasing = true;
-		qt.y-=200;
+		qt.antialiasing = ClientPrefs.globalAntialiasing;
+		qt.y -= 200;
 		add(qt);
-
-
+		qt.shader = swagShader.shader;
 		titleText = new FlxSprite(titleJSON.startx, titleJSON.starty);
 		#if (desktop && MODS_ALLOWED)
 		var path = "mods/" + Paths.currentModDirectory + "/images/titleEnter.png";
@@ -362,6 +355,7 @@ class TitleState extends MusicBeatState
 		titleText.updateHitbox();
 		// titleText.screenCenter(X);
 		add(titleText);
+		titleText.shader = swagShader.shader;
 
 		var logo:FlxSprite = new FlxSprite().loadGraphic(Paths.image('logo'));
 		logo.screenCenter();
@@ -399,8 +393,6 @@ class TitleState extends MusicBeatState
 			skipIntro();
 		else
 			initialized = true;
-
-		// credGroup.add(credTextShit);
 	}
 
 	function getIntroTextShit():Array<Array<String>>
@@ -411,9 +403,7 @@ class TitleState extends MusicBeatState
 		var swagGoodArray:Array<Array<String>> = [];
 
 		for (i in firstArray)
-		{
 			swagGoodArray.push(i.split('--'));
-		}
 
 		return swagGoodArray;
 	}
@@ -448,6 +438,9 @@ class TitleState extends MusicBeatState
 			#if switch
 			if (gamepad.justPressed.B)
 				pressedEnter = true;
+			#else
+			if (gamepad.justPressed.A)
+				pressedEnter = true;
 			#end
 		}
 
@@ -459,7 +452,7 @@ class TitleState extends MusicBeatState
 			{
 				if(titleText != null) titleText.animation.play('press');
 
-				FlxG.camera.flash(FlxColor.WHITE, 1);
+				FlxG.camera.flash(ClientPrefs.flashing ? FlxColor.WHITE : FlxColor.GRAY, 1);
 				FlxG.sound.play(Paths.sound('confirmMenu'), 0.7);
 
 				transitioning = true;
@@ -660,7 +653,7 @@ class TitleState extends MusicBeatState
 
 				case 17:
 					if (!skippedIntro){
-						FlxG.camera.fade(FlxColor.WHITE, 0.435, false);}
+						FlxG.camera.fade(ClientPrefs.flashing ? FlxColor.WHITE : FlxColor.GRAY, 0.435, false);}
 				case 18:
 					skipIntro();
 			}
@@ -673,9 +666,13 @@ class TitleState extends MusicBeatState
 		if (!skippedIntro)
 		{
 			remove(ngSpr);
-			FlxG.camera.fade(FlxColor.WHITE, 0.01, true);
-			FlxG.camera.flash(FlxColor.WHITE, 4);
 			remove(credGroup);
+			if (firstTime)
+			{
+				FlxG.camera.stopFX();
+				FlxG.camera.fade(ClientPrefs.flashing ? FlxColor.WHITE : FlxColor.GRAY, 0.01, true);
+				FlxG.camera.flash(ClientPrefs.flashing ? FlxColor.WHITE : FlxColor.GRAY, 4);
+			}
 			skippedIntro = true;
 		}
 	}

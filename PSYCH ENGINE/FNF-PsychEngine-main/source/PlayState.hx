@@ -28,7 +28,7 @@ import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 import flixel.system.FlxAssets.FlxShader;
-import flixel.system.FlxSound;
+import flixel.sound.FlxSound;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
@@ -88,10 +88,6 @@ class PlayState extends MusicBeatState
 	public var modchartTimers:Map<String, FlxTimer> = new Map<String, FlxTimer>();
 	public var modchartSounds:Map<String, FlxSound> = new Map<String, FlxSound>();
 	public var modchartTexts:Map<String, ModchartText> = new Map<String, ModchartText>();
-	public var shader_chromatic_abberation:ChromaticAberrationEffect;
-	public var camGameShaders:Array<ShaderEffect> = [];
-	public var camHUDShaders:Array<ShaderEffect> = [];
-	public var camOtherShaders:Array<ShaderEffect> = [];
 	//event variables
 	private var isCameraOnForcedPos:Bool = false;
 	#if (haxe >= "4.0.0")
@@ -330,6 +326,7 @@ class PlayState extends MusicBeatState
 	public var pincer2:FlxSprite;
 	public var pincer3:FlxSprite;
 	public var pincer4:FlxSprite;
+	var pincers:Array<FlxSprite> = []; // a array of the pincers for otmizing the code. -Luis
 	var qt_gas01:FlxSprite;
 	var qt_gas02:FlxSprite;
 	var hazardRandom:Int = 1; //This integer is randomised upon song start between 1-5.
@@ -430,21 +427,17 @@ class PlayState extends MusicBeatState
 		practiceMode = ClientPrefs.getGameplaySetting('practice', false);
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay', false);
 
-		shader_chromatic_abberation = new ChromaticAberrationEffect();
-
 		// var gameCam:FlxCamera = FlxG.camera;
-		camGame = new FlxCamera();
-		camHUD = new FlxCamera();
-		camOther = new FlxCamera();
+		FlxG.cameras.reset(camGame = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camGame, true);
+		FlxG.cameras.add(camHUD = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camHUD, false);
 		camHUD.bgColor.alpha = 0;
+		FlxG.cameras.add(camOther = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camOther, false);
 		camOther.bgColor.alpha = 0;
-
-		FlxG.cameras.reset(camGame);
-		FlxG.cameras.add(camHUD);
-		FlxG.cameras.add(camOther);
 		grpNoteSplashes = new FlxTypedGroup<NoteSplash>();
 
-		FlxCamera.defaultCameras = [camGame];
 		CustomFadeTransition.nextCamera = camOther;
 		//FlxG.cameras.setDefaultDrawTarget(camGame, true);
 
@@ -996,61 +989,43 @@ class PlayState extends MusicBeatState
 		sawbladeHits = 0;
 		tauntCounter = 0;
 
-		//Pincer shit for moving notes around for a little bit of trollin'
 		pincer1 = new FlxSprite(0, 0).loadGraphic(Paths.image('hazard/qt-port/pincer-close'));
-		pincer1.antialiasing = ClientPrefs.globalAntialiasing;
-		pincer1.scrollFactor.set();
-		
 		pincer2 = new FlxSprite(0, 0).loadGraphic(Paths.image('hazard/qt-port/pincer-close'));
-		pincer2.antialiasing = ClientPrefs.globalAntialiasing;
-		pincer2.scrollFactor.set();
-		
 		pincer3 = new FlxSprite(0, 0).loadGraphic(Paths.image('hazard/qt-port/pincer-close'));
-		pincer3.antialiasing = ClientPrefs.globalAntialiasing;
-		pincer3.scrollFactor.set();
-
 		pincer4 = new FlxSprite(0, 0).loadGraphic(Paths.image('hazard/qt-port/pincer-close'));
-		pincer4.antialiasing = ClientPrefs.globalAntialiasing;
-		pincer4.scrollFactor.set();
-		
-		if (ClientPrefs.downScroll){
-			pincer4.angle = 270;
-			pincer3.angle = 270;
-			pincer2.angle = 270;
-			pincer1.angle = 270;
-			pincer1.offset.set(192,-75);
-			pincer2.offset.set(192,-75);
-			pincer3.offset.set(192,-75);
-			pincer4.offset.set(192,-75);
-		}else{
-			pincer4.angle = 90;
-			pincer3.angle = 90;
-			pincer2.angle = 90;
-			pincer1.angle = 90;
-			pincer1.offset.set(218,240);
-			pincer2.offset.set(218,240);
-			pincer3.offset.set(218,240);
-			pincer4.offset.set(218,240);
+
+		for (sprite in pincers = [pincer1, pincer2, pincer3, pincer4])
+		{
+			sprite.antialiasing = ClientPrefs.globalAntialiasing;
+			sprite.scrollFactor.set();
+			if (ClientPrefs.downScroll)
+			{
+				sprite.angle = 270;
+				sprite.offset.set(192, -75);
+			}
+			else
+			{
+				sprite.angle = 90;
+				sprite.offset.set(218, 240);
+			}
 		}
 
 		//For the 'alarm' effect. Only added if flashling lights is allowed and low quality is off.
-		if(ClientPrefs.flashing && !ClientPrefs.lowQuality){
+		// For the 'alarm' effect. Only added if flashling lights is allowed and low quality is off.
+		if (ClientPrefs.flashing && !ClientPrefs.lowQuality)
+		{
 			hazardAlarmLeft = new BGSprite('hazard/inhuman-port/back-Gradient', -600, -480, 0.5, 0.5);
-			hazardAlarmLeft.setGraphicSize(Std.int(hazardAlarmLeft.width * 1.1));
-			hazardAlarmLeft.updateHitbox();
-			hazardAlarmLeft.alpha=0;
-			hazardAlarmLeft.color = FlxColor.RED;
-			hazardAlarmLeft.cameras = [camOther];
-			hazardAlarmLeft.x-=85;
-			add(hazardAlarmLeft);
 			hazardAlarmRight = new BGSprite('hazard/inhuman-port/back-Gradient', -600, -480, 0.5, 0.5);
-			hazardAlarmRight.setGraphicSize(Std.int(hazardAlarmRight.width * 1.1));
-			hazardAlarmRight.updateHitbox();
+			for (sprite in [hazardAlarmLeft, hazardAlarmRight])
+			{
+				sprite.setGraphicSize(Std.int(sprite.width * 1.1));
+				sprite.updateHitbox();
+				sprite.alpha = 0;
+				sprite.cameras = [camOther];
+				sprite.x -= 85;
+			}
 			hazardAlarmRight.flipX = true;
-			hazardAlarmRight.alpha=0;
-			hazardAlarmRight.color = FlxColor.RED;
-			hazardAlarmRight.cameras = [camOther];
-			hazardAlarmRight.x-=85;
+			add(hazardAlarmLeft);
 			add(hazardAlarmRight);
 		}
 
@@ -1729,26 +1704,11 @@ class PlayState extends MusicBeatState
 		if(!ClientPrefs.noShaders){
 			switch(cam.toLowerCase()) {
 				case 'camhud' | 'hud':
-						camHUDShaders.push(effect);
-						var newCamEffects:Array<BitmapFilter>=[]; // IT SHUTS HAXE UP IDK WHY BUT WHATEVER IDK WHY I CANT JUST ARRAY<SHADERFILTER>
-						for(i in camHUDShaders){
-						newCamEffects.push(new ShaderFilter(i.shader));
-						}
-						camHUD.setFilters(newCamEffects);
+						camHUD.filters.push(new ShaderFilter(effect.shader));
 				case 'camother' | 'other':
-						camOtherShaders.push(effect);
-						var newCamEffects:Array<BitmapFilter>=[]; // IT SHUTS HAXE UP IDK WHY BUT WHATEVER IDK WHY I CANT JUST ARRAY<SHADERFILTER>
-						for(i in camOtherShaders){
-						newCamEffects.push(new ShaderFilter(i.shader));
-						}
-						camOther.setFilters(newCamEffects);
+						camOther.filters.push(new ShaderFilter(effect.shader));
 				case 'camgame' | 'game':
-						camGameShaders.push(effect);
-						var newCamEffects:Array<BitmapFilter>=[]; // IT SHUTS HAXE UP IDK WHY BUT WHATEVER IDK WHY I CANT JUST ARRAY<SHADERFILTER>
-						for(i in camGameShaders){
-						newCamEffects.push(new ShaderFilter(i.shader));
-						}
-						camGame.setFilters(newCamEffects);
+						camGame.filters.push(new ShaderFilter(effect.shader));
 				default:
 					if(modchartSprites.exists(cam)) {
 						Reflect.setProperty(modchartSprites.get(cam),"shader",effect.shader);
@@ -1769,27 +1729,18 @@ class PlayState extends MusicBeatState
   public function removeShaderFromCamera(cam:String,effect:ShaderEffect){
 	if(!ClientPrefs.noShaders){
 		switch(cam.toLowerCase()) {
-			case 'camhud' | 'hud': 
-    			camHUDShaders.remove(effect);
-    			var newCamEffects:Array<BitmapFilter>=[];
-    			for(i in camHUDShaders){
-    			  newCamEffects.push(new ShaderFilter(i.shader));
-    			}
-    			camHUD.setFilters(newCamEffects);
+			case 'camhud' | 'hud':
+				if(camHUD.filters != null) {
+					camHUD.filters.remove(camHUD.filters.filter(function(filter) return Std.isOfType(filter, ShaderFilter) && cast(filter, ShaderFilter).shader == effect.shader)[0]);
+				}
 			case 'camother' | 'other': 
-				camOtherShaders.remove(effect);
-				var newCamEffects:Array<BitmapFilter>=[];
-				for(i in camOtherShaders){
-					newCamEffects.push(new ShaderFilter(i.shader));
+				if(camOther.filters != null) {
+					camOther.filters.remove(camOther.filters.filter(function(filter) return Std.isOfType(filter, ShaderFilter) && cast(filter, ShaderFilter).shader == effect.shader)[0]);
 				}
-				camOther.setFilters(newCamEffects);
-			default: 
-				camGameShaders.remove(effect);
-				var newCamEffects:Array<BitmapFilter>=[];
-				for(i in camGameShaders){
-				  newCamEffects.push(new ShaderFilter(i.shader));
+			default:
+				if(camGame.filters != null) {
+					camGame.filters.remove(camGame.filters.filter(function(filter) return Std.isOfType(filter, ShaderFilter) && cast(filter, ShaderFilter).shader == effect.shader)[0]);
 				}
-				camGame.setFilters(newCamEffects);
 		}
 	}
   }
@@ -1798,11 +1749,11 @@ class PlayState extends MusicBeatState
   public function flippyTime(cam:String){
 	switch(cam.toLowerCase()) {
 		case 'camhud' | 'hud': 
-			camHUD.setScale(camHUD.scaleX * -1,camHUD.scaleY);
+			camHUD.setScale(camHUD.scaleX * -1, camHUD.scaleY);
 		case 'camother' | 'other': 
-			camOther.setScale(camHUD.scaleX * -1,camHUD.scaleY);
+			camOther.setScale(camOther.scaleX * -1, camOther.scaleY);
 		default: 
-			camGame.setScale(camHUD.scaleX * -1,camHUD.scaleY);
+			camGame.setScale(camGame.scaleX * -1, camGame.scaleY);
 	}
 }
 	
@@ -1811,17 +1762,11 @@ class PlayState extends MusicBeatState
 	  
 		switch(cam.toLowerCase()) {
 			case 'camhud' | 'hud': 
-				camHUDShaders = [];
-				var newCamEffects:Array<BitmapFilter>=[];
-				camHUD.setFilters(newCamEffects);
+				camHUD.filters = [];
 			case 'camother' | 'other': 
-				camOtherShaders = [];
-				var newCamEffects:Array<BitmapFilter>=[];
-				camOther.setFilters(newCamEffects);
+				camOther.filters = [];
 			default: 
-				camGameShaders = [];
-				var newCamEffects:Array<BitmapFilter>=[];
-				camGame.setFilters(newCamEffects);
+				camGame.filters = [];
 		}
 		
 	  
@@ -2194,7 +2139,7 @@ class PlayState extends MusicBeatState
 				notes.forEachAlive(function(note:Note) {
 					note.copyAlpha = false;
 					note.alpha = note.multAlpha;
-					if(forceMiddleScroll && !note.mustPress) {
+					if(forceMiddleScroll && !note.mustPress && note.noteType == null) {
 						note.alpha *= 0.5;
 					}
 				});
@@ -3827,141 +3772,43 @@ class PlayState extends MusicBeatState
 
 
 	//Pincer logic, used by the modchart but can be hardcoded like saws if you want.
-	public function KBPINCER_PREPARE(laneID:Int,goAway:Bool):Void
+	public function KBPINCER_PREPARE(laneID:Int, goAway:Bool):Void
 	{
-		//1 = BF far left, 4 = BF far right. This only works for BF!
-		//Update! 5 now refers to the far left lane (KB side). Mainly used for the shaking section or whatever.
-		//UPDATE 2! 6 now refers to the far right lane (KB side). Used for the screen shasking effect when in middle scroll.
-		pincer1.cameras = [camHUD];
-		pincer2.cameras = [camHUD];
-		pincer3.cameras = [camHUD];
-		pincer4.cameras = [camHUD];
+		// 1 = BF far left, 4 = BF far right. This only works for BF!
+		// Update! 5 now refers to the far left lane (KB side). Mainly used for the shaking section or whatever.
+		// UPDATE 2! 6 now refers to the far right lane (KB side). Used for the screen shasking effect when in middle scroll.
+		// Qt Fixes: Optmized code as much as possible. -Luis
+		if (laneID > 6)
+			return trace('Invalid LaneID for pincer');
 
-		//This is probably the most disgusting code I've ever written in my life.
-		//OH MY FUCKING GOD HAZARD, YOU DIDN'T EVEN FIX THIS AWFUL SHIT? WHY?! FUCK YOU FOR LEAVING THIS HERE! -Future Haz
-		//All because I can't be bothered to learn arrays and shit.
-		//Would've converted this to a switch case but I'm too scared to change it so deal with it.
-		if(laneID==1){
-			pincer1.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer1.setPosition(strumLineNotes.members[4].x,strumLineNotes.members[4].y+500);
-					add(pincer1);
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[4].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[4].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer1);}});
-				}
-			}else{
-				if(!goAway){
-					pincer1.setPosition(strumLineNotes.members[4].x,strumLineNotes.members[4].y-500);
-					add(pincer1);
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[4].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[4].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer1);}});
-				}
-			}
+		var pincer:FlxSprite;
+		pincer = pincers[(laneID - 1) % 4].loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
+		pincer.cameras = [camHUD];
+
+		var spr:StrumNote = null;
+		if (laneID < 5)
+			spr = playerStrums.members[laneID - 1];
+		else
+			spr = opponentStrums.members[laneID == 5 ? 0 : 3];
+
+		var sign:Int = ClientPrefs.downScroll ? 1 : -1;
+		var yPos:Float = spr.y + sign * 500;
+
+		if (!goAway)
+		{
+			pincer.setPosition(spr.x, yPos);
+			add(pincer);
+			FlxTween.tween(pincer, {y: spr.y}, 0.3, {ease: FlxEase.elasticOut});
 		}
-		else if(laneID==5){ //Targets far left note for Dad (KB). Used for the screenshake thing
-			pincer1.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer1.setPosition(strumLineNotes.members[0].x,strumLineNotes.members[0].y+500);
-					add(pincer1);
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[0].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[0].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer1);}});
+		else
+		{
+			FlxTween.tween(pincer, {y: yPos}, 0.4, {
+				ease: FlxEase.backIn,
+				onComplete: function(twn:FlxTween)
+				{
+					remove(pincer, true);
 				}
-			}else{
-				if(!goAway){
-					pincer1.setPosition(strumLineNotes.members[0].x,strumLineNotes.members[0].y-500);
-					add(pincer1);
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[0].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer1, {y : strumLineNotes.members[0].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer1);}});
-				}
-			}
-		}
-		else if(laneID==6){ //Targets far right note for Dad (KB). Used for the screenshake thing when middle scrolling
-			pincer2.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer2.setPosition(strumLineNotes.members[3].x,strumLineNotes.members[3].y+500);
-					add(pincer2);
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[3].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[3].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer2);}});
-				}
-			}else{
-				if(!goAway){
-					pincer2.setPosition(strumLineNotes.members[3].x,strumLineNotes.members[3].y-500);
-					add(pincer2);
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[3].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[3].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer2);}});
-				}
-			}
-		}
-		else if(laneID==2){
-			pincer2.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer2.setPosition(strumLineNotes.members[5].x,strumLineNotes.members[5].y+500);
-					add(pincer2);
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[5].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[5].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer2);}});
-				}
-			}else{
-				if(!goAway){
-					pincer2.setPosition(strumLineNotes.members[5].x,strumLineNotes.members[5].y-500);
-					add(pincer2);
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[5].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer2, {y : strumLineNotes.members[5].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer2);}});
-				}
-			}
-		}
-		else if(laneID==3){
-			pincer3.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer3.setPosition(strumLineNotes.members[6].x,strumLineNotes.members[6].y+500);
-					add(pincer3);
-					FlxTween.tween(pincer3, {y : strumLineNotes.members[6].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer3, {y : strumLineNotes.members[6].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer3);}});
-				}
-			}else{
-				if(!goAway){
-					pincer3.setPosition(strumLineNotes.members[6].x,strumLineNotes.members[6].y-500);
-					add(pincer3);
-					FlxTween.tween(pincer3, {y : strumLineNotes.members[6].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer3, {y : strumLineNotes.members[6].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer3);}});
-				}
-			}
-		}
-		else if(laneID==4){
-			pincer4.loadGraphic(Paths.image('hazard/qt-port/pincer-open'), false);
-			if(ClientPrefs.downScroll){
-				if(!goAway){
-					pincer4.setPosition(strumLineNotes.members[7].x,strumLineNotes.members[7].y+500);
-					add(pincer4);
-					FlxTween.tween(pincer4, {y : strumLineNotes.members[7].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer4, {y : strumLineNotes.members[7].y+500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer4);}});
-				}
-			}else{
-				if(!goAway){
-					pincer4.setPosition(strumLineNotes.members[7].x,strumLineNotes.members[7].y-500);
-					add(pincer4);
-					FlxTween.tween(pincer4, {y : strumLineNotes.members[7].y}, 0.3, {ease: FlxEase.elasticOut});
-				}else{
-					FlxTween.tween(pincer4, {y : strumLineNotes.members[7].y-500}, 0.4, {ease: FlxEase.backIn, onComplete: function(twn:FlxTween){remove(pincer4);}});
-				}
-			}
-		}else{
-			trace("Invalid LaneID for pincer");
+			});
 		}
 	}
 
@@ -6171,7 +6018,7 @@ class PlayState extends MusicBeatState
 			dad.playAnim('hey', true);
 			dad.specialAnim = true;
 			dad.heyTimer = 0.6;
-		} else if(!note.noAnimation && !note.ignoreNote && !note.hitCausesMiss) { //Added ignoreNote and hitMiss check to stop animations from playing from hurt notes. -Haz
+		} else if(!note.ignoreNote && !note.hitCausesMiss) { //Added ignoreNote and hitMiss check to stop animations from playing from hurt notes. -Haz
 			var altAnim:String = "";
 
 			//Makes KB's strums move back a bit to show his power... or something idfk it looks cool okay? -Haz
@@ -6211,6 +6058,8 @@ class PlayState extends MusicBeatState
 					}
 				}
 			}
+			if (!note.noAnimation)
+			{
 			var curSection:Int = Math.floor(curStep / 16);
 			if (SONG.notes[curSection] != null)
 			{
@@ -6237,6 +6086,7 @@ class PlayState extends MusicBeatState
 
 			char.playAnim(animToPlay, true);
 			char.holdTimer = 0;
+		}
 		}
 
 		if (SONG.needsVoices && !inhumanSong) //Player2/Opponent can't restore vocals, only player1 can.

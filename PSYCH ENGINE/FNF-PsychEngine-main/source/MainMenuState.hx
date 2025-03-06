@@ -55,13 +55,11 @@ class MainMenuState extends MusicBeatState
 		#end
 		debugKeys = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 
-		camGame = new FlxCamera();
-		camAchievement = new FlxCamera();
+		FlxG.cameras.reset(camGame = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camGame, true);
+		FlxG.cameras.add(camAchievement = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camAchievement, false);
 		camAchievement.bgColor.alpha = 0;
-
-		FlxG.cameras.reset(camGame);
-		FlxG.cameras.add(camAchievement);
-		FlxCamera.defaultCameras = [camGame];
 
 		transIn = FlxTransitionableState.defaultTransIn;
 		transOut = FlxTransitionableState.defaultTransOut;

@@ -11,7 +11,7 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxMath;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
-import flixel.system.FlxSound;
+import flixel.sound.FlxSound;
 import flixel.addons.ui.FlxInputText;
 import flixel.addons.ui.FlxUI9SliceSprite;
 import flixel.addons.ui.FlxUI;
@@ -72,14 +72,13 @@ class DialogueCharacterEditorState extends MusicBeatState
 
 	override function create() {
 		persistentUpdate = persistentDraw = true;
-		camGame = new FlxCamera();
-		camOther = new FlxCamera();
-		camGame.bgColor = FlxColor.fromHSL(0, 0, 0.5);
-		camOther.bgColor.alpha = 0;
 
-		FlxG.cameras.reset(camGame);
-		FlxG.cameras.add(camOther);
-		FlxCamera.defaultCameras = [camOther];
+		FlxG.cameras.reset(camGame = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camGame, false);
+		camGame.bgColor = FlxColor.fromHSL(0, 0, 0.5);
+		FlxG.cameras.add(camOther = new FlxCamera());
+		FlxG.cameras.setDefaultDrawTarget(camOther, true);
+		camOther.bgColor.alpha = 0;
 		
 		mainGroup = new FlxSpriteGroup();
 		mainGroup.cameras = [camGame];
