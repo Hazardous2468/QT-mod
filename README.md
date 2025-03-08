@@ -1,7 +1,8 @@
 # QT
 ### Official QT source code and assets
 
-Ported all the files from my Google Drive to here to free up drive space.
+Ported all the files from my Google Drive to here to free up drive space.  
+Note that this is just an archive and isn't going to be actively maintained or updated.
 
 
 ## Credits:
