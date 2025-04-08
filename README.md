@@ -4,6 +4,7 @@
 Ported all the files from my Google Drive to here to free up drive space.  
 Note that this is just an archive and isn't going to be actively maintained or updated.
 
+Download the mod here: https://gamebanana.com/mods/299714
 
 ## Credits:
 **Engine:** Psych Engine (Kade Engine for older versions)
